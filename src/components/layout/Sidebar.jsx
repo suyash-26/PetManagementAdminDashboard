@@ -44,7 +44,7 @@ const NAV_SECTIONS = [
 const PLATFORM_SECTION = {
   title: "Platform",
   items: [
-    { to: "/dashboard/platform/centers", label: "Approve Centers", icon: ShieldCheck, ready: true },
+    { to: "/dashboard/platform/centers", label: "Manage Centers", icon: ShieldCheck, ready: true },
     { to: "/dashboard/platform/users", label: "Users & Roles", icon: UserCog, ready: true },
   ],
 };

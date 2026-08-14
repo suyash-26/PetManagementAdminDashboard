@@ -45,6 +45,17 @@ export function listPublicCenters(city) {
   return coreRequest(`/centers${query}`, { method: "GET" });
 }
 
+// GET /centers/admin?status=&city= -> CareCenterResponse[]. SUPER_ADMIN only.
+// Unlike the public feed this returns every status, so PENDING centers awaiting approval
+// are visible. Both params are optional; omitting status returns all centers.
+export function listAllCenters({ status, city } = {}) {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  if (city) params.set("city", city);
+  const query = params.toString();
+  return coreRequest(`/centers/admin${query ? `?${query}` : ""}`, { method: "GET" });
+}
+
 // GET /centers/{id} -> CareCenterResponse
 export function getCenter(id) {
   return coreRequest(`/centers/${id}`, { method: "GET" });
