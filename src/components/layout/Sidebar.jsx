@@ -31,8 +31,8 @@ const NAV_SECTIONS = [
   {
     title: "Operations",
     items: [
-      { to: "/dashboard/requests", label: "Request Queue", icon: ClipboardList, ready: false },
-      { to: "/dashboard/intake", label: "Intake", icon: Inbox, ready: false },
+      { to: "/dashboard/requests", label: "Request Queue", icon: ClipboardList, ready: true },
+      { to: "/dashboard/intake", label: "Intake", icon: Inbox, ready: true },
       { to: "/dashboard/custody", label: "Custody Roster", icon: PawPrint, ready: false },
       { to: "/dashboard/listings", label: "Adoption Listings", icon: Heart, ready: false },
       { to: "/dashboard/boarding", label: "Boarding", icon: Hotel, ready: false },

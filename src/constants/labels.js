@@ -25,8 +25,21 @@ export const MEMBER_ROLE_LABELS = {
 
 export const MEMBER_ROLES = ["OWNER", "STAFF"];
 
-// RequestStatus — requests/enums/RequestStatus.java. Unused until the request queue is
-// wired, but the queue page already references it.
+// IntakeReason — intake/enums/IntakeReason.java.
+export const INTAKE_REASON_LABELS = {
+  REHOMING: { label: "Rehoming", color: "bg-sky-100 text-sky-700" },
+  SURRENDER: { label: "Surrender", color: "bg-amber-100 text-amber-700" },
+  EMERGENCY: { label: "Emergency", color: "bg-rose-100 text-rose-700" },
+};
+
+// CustodyMode — intake/enums/CustodyMode.java. v2 §6.3: only PHYSICAL consumes a kennel
+// slot, which is what makes this worth showing on every intake row.
+export const CUSTODY_MODE_LABELS = {
+  PHYSICAL: { label: "Physical custody", color: "bg-indigo-100 text-indigo-700" },
+  FOSTER_IN_PLACE: { label: "Foster in place", color: "bg-emerald-100 text-emerald-700" },
+};
+
+// RequestStatus — requests/enums/RequestStatus.java.
 export const REQUEST_STATUS_LABELS = {
   PENDING: { label: "Pending", color: "bg-amber-100 text-amber-700" },
   APPROVED: { label: "Approved", color: "bg-sky-100 text-sky-700" },

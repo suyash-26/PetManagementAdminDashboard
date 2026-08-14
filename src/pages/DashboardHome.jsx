@@ -53,7 +53,7 @@ const QUICK_ACTIONS = [
     accent: "sky",
     title: "Review requests",
     body: "One queue for intake, adoption and boarding.",
-    ready: false,
+    ready: true,
   },
   {
     to: "/dashboard/custody",

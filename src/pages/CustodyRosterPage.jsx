@@ -20,13 +20,17 @@ export default function CustodyRosterPage() {
         }
       />
       <div className="mt-6">
+        {/* Not merely unbuilt: the route is mapped and deliberately answers 501, because
+            a roster means querying pets by custodian_center_id — and nothing sets that
+            column yet, since completing an intake doesn't transfer custody. Wiring a
+            fetch here would render an empty table that looked correct. */}
         <ModuleNotReady
           title="The custody roster isn't wired up yet"
-          description="A pet only becomes listable for adoption once it is in a center's custody — that single invariant is what makes peer-to-peer adoption structurally impossible."
+          description="The endpoint exists but answers 501 by design: a roster is 'pets whose custodian is this center', and no code sets a custodian yet — the transfer that would do it is the same gap that makes completing an intake a record-only change. A pet must be in a center's custody before it can be listed for adoption, which is the invariant that makes peer-to-peer adoption structurally impossible."
           owner="Intake module + CustodyService (v2 §9, Dev 4/6)"
           plannedEndpoints={[
-            "GET /centers/{id}/custody",
-            "GET /pets/{id}/custody-history",
+            "GET /intake/centers/{id}/custody   → 501 today",
+            "GET /pets/{id}/custody-history     → not mapped",
           ]}
         />
       </div>
