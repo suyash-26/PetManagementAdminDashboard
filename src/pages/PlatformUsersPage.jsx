@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { Save, Search, UserCog, Users } from "lucide-react";
+import { Search, ShieldPlus, UserCog, Users } from "lucide-react";
 import PageHeader from "../components/PageHeader";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Badge from "../components/ui/Badge";
 import Avatar from "../components/ui/Avatar";
-import { Input, Select } from "../components/ui/Field";
+import Modal from "../components/ui/Modal";
+import { Input } from "../components/ui/Field";
 import { Alert, EmptyState, SkeletonRows } from "../components/ui/Feedback";
 import { useToast } from "../components/ui/Toast";
 import * as usersApi from "../api/users";
@@ -17,9 +18,15 @@ import {
 } from "../constants/labels";
 import { useAuth } from "../context/AuthContext";
 
-// SUPER_ADMIN only. Runs entirely on the mock in src/api/users.js — AuthService has no
-// user-listing or role-change endpoint yet. Swapping in the real API is a two-line
-// change there; this page needs no edits.
+// SUPER_ADMIN only.
+//   GET  /auth/users?search=      — AuthController.getAllUsers
+//   POST /auth/users/{id}/role    — AuthController.updateRoleOfUser
+// Both are @PreAuthorize("hasRole('SUPER_ADMIN')"), and ProtectedRoute already keeps
+// anyone else off this route, so a 403 here means the token's role claim is stale.
+//
+// Promotion to SUPER_ADMIN is the only role change offered. The endpoint accepts any of
+// the three roles, but demotion isn't exposed here — which is also why promoting asks for
+// confirmation first: from this page it cannot be undone.
 export default function PlatformUsersPage() {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
@@ -29,7 +36,7 @@ export default function PlatformUsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingId, setSavingId] = useState(null);
-  const [drafts, setDrafts] = useState({}); // userId -> role chosen but not yet saved
+  const [pendingPromotion, setPendingPromotion] = useState(null);
 
   const refresh = useCallback(async (term) => {
     setLoading(true);
@@ -52,37 +59,25 @@ export default function PlatformUsersPage() {
     refresh(search.trim());
   }
 
-  async function handleSave(target) {
-    const nextRole = drafts[target.id];
-    if (!nextRole || nextRole === target.role) return;
-
-    // Demoting the last super admin leaves nobody able to approve centers — and nobody
-    // able to undo it, since this page is itself super-admin-only. The real endpoint
-    // must enforce this server-side; blocking it here just prevents the obvious mistake.
-    if (
-      target.role === ROLE_SUPER_ADMIN &&
-      nextRole !== ROLE_SUPER_ADMIN &&
-      usersApi.countSuperAdmins() <= 1
-    ) {
-      setError("This is the last super admin. Promote someone else before demoting them.");
-      return;
-    }
+  async function confirmPromotion() {
+    const target = pendingPromotion;
+    if (!target) return;
 
     setError("");
     setSavingId(target.id);
     try {
-      const updated = await usersApi.updateUserRole(target.id, nextRole);
-      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
-      setDrafts((prev) => {
-        const next = { ...prev };
-        delete next[target.id];
-        return next;
-      });
+      const updated = await usersApi.updateUserRole(target.id, ROLE_SUPER_ADMIN);
+      // Merge rather than replace: the role endpoint answers with UserResponse (which
+      // carries addresses) while the list holds UserSummaryResponse, so a straight swap
+      // would change the shape of one row.
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)));
+      setPendingPromotion(null);
       toast(
-        `${updated.firstName} ${updated.lastName} is now ${PLATFORM_ROLE_LABELS[updated.role].label}. They must log out and back in for it to take effect.`,
+        `${usersApi.userLabel(updated)} is now a super admin. They must log out and back in for it to take effect.`,
       );
     } catch (err) {
       setError(err.message);
+      setPendingPromotion(null);
     } finally {
       setSavingId(null);
     }
@@ -93,15 +88,8 @@ export default function PlatformUsersPage() {
       <PageHeader
         eyebrow="Platform"
         title="Users & Roles"
-        subtitle="Platform-wide role management. A role change takes effect on the user's next login, because the role is carried in their token."
+        subtitle="Every account on the platform. Promoting someone to super admin takes effect on their next login, because the role is carried in their token."
       />
-
-      {/* Unmissable on purpose — nothing here persists, and a reviewer clicking through
-          shouldn't mistake it for a working feature. */}
-      <Alert tone="warning" className="mb-5" title="Mock data">
-        AuthService has no user-listing or role-change endpoint yet, so this page runs on
-        an in-memory list. Changes are lost on refresh.
-      </Alert>
 
       {error && <Alert tone="error" className="mb-5">{error}</Alert>}
 
@@ -144,23 +132,19 @@ export default function PlatformUsersPage() {
           <div className="divide-y divide-white/60">
             {users.map((row) => {
               const isSelf = String(row.id) === String(currentUser?.id);
-              const draft = drafts[row.id] ?? row.role;
-              const changed = draft !== row.role;
+              const isSuperAdmin = row.role === ROLE_SUPER_ADMIN;
+              const fullName = usersApi.userLabel(row);
 
               return (
                 <div
                   key={row.id}
                   className="flex flex-wrap items-center gap-4 p-4 transition-colors hover:bg-white/45 sm:px-5"
                 >
-                  <Avatar
-                    name={`${row.firstName} ${row.lastName}`}
-                    seed={row.email}
-                    size="lg"
-                  />
+                  <Avatar name={fullName} seed={row.email} size="lg" />
 
                   <div className="min-w-[10rem] flex-1">
                     <p className="text-[13.5px] font-bold text-ink-900">
-                      {row.firstName} {row.lastName}
+                      {fullName}
                       {isSelf && (
                         <span className="ml-2 rounded-md bg-brand-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brand-600">
                           you
@@ -177,33 +161,24 @@ export default function PlatformUsersPage() {
                     <Badge status={row.role} labels={PLATFORM_ROLE_LABELS} />
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <div className="w-40">
-                      <Select
-                        value={draft}
-                        disabled={isSelf}
-                        aria-label={`Role for ${row.firstName} ${row.lastName}`}
-                        title={isSelf ? "You can't change your own role" : ROLE_HINTS[draft]}
-                        onChange={(e) =>
-                          setDrafts((prev) => ({ ...prev, [row.id]: e.target.value }))
-                        }
+                  {/* Fixed width whether or not a button renders, so the badge column
+                      above doesn't shift between rows. */}
+                  <div className="flex w-full justify-end sm:w-[11.5rem]">
+                    {isSuperAdmin ? (
+                      <span className="text-[12px] text-ink-400">
+                        {isSelf ? "That's you" : "Already a super admin"}
+                      </span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        icon={ShieldPlus}
+                        loading={savingId === row.id}
+                        onClick={() => setPendingPromotion(row)}
+                        title={`Make ${fullName} a super admin`}
                       >
-                        {PLATFORM_ROLES.map((role) => (
-                          <option key={role} value={role}>
-                            {PLATFORM_ROLE_LABELS[role].label}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
-                    <Button
-                      size="sm"
-                      icon={Save}
-                      disabled={!changed || isSelf}
-                      loading={savingId === row.id}
-                      onClick={() => handleSave(row)}
-                    >
-                      Save
-                    </Button>
+                        Make super admin
+                      </Button>
+                    )}
                   </div>
                 </div>
               );
@@ -236,6 +211,33 @@ export default function PlatformUsersPage() {
           </div>
         </div>
       </Card>
+
+      {/* Confirmed rather than one-click: this page grants the highest privilege on the
+          platform and offers no way back, so a misclick would need a database fix. */}
+      <Modal
+        open={Boolean(pendingPromotion)}
+        onClose={() => setPendingPromotion(null)}
+        title="Make this user a super admin?"
+        description={
+          pendingPromotion
+            ? `${usersApi.userLabel(pendingPromotion)} (${pendingPromotion.email}) will be able to approve, suspend, and reinstate care centers, and promote other users. This page can't undo it. The change applies the next time they log in.`
+            : ""
+        }
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setPendingPromotion(null)}>
+              Cancel
+            </Button>
+            <Button
+              icon={ShieldPlus}
+              loading={savingId === pendingPromotion?.id}
+              onClick={confirmPromotion}
+            >
+              Make super admin
+            </Button>
+          </>
+        }
+      />
     </div>
   );
 }

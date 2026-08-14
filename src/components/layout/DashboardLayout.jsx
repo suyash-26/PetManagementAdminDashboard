@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Calendar, Menu, X } from "lucide-react";
 import Sidebar from "./Sidebar";
 import UserMenu from "./UserMenu";
 import Brand from "../Brand";
@@ -49,24 +49,37 @@ export default function DashboardLayout() {
         )}
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* On desktop the sidebar already carries the brand, so a full-width bar
-              would just be an empty strip — the controls float top-right instead.
-              On mobile it stays a solid bar because it also holds the menu button. */}
-          <header className="glass-bar sticky top-0 z-30 mb-5 flex items-center justify-between gap-3 px-4 py-3 lg:mb-4 lg:justify-end lg:px-0">
-            <div className="flex min-w-0 items-center gap-3 lg:hidden">
-              <button
-                onClick={() => setNavOpen(true)}
-                aria-label="Open navigation"
-                className="rounded-[10px] p-2 text-ink-500 transition hover:bg-ink-900/5 hover:text-ink-900"
-              >
-                <Menu size={19} strokeWidth={2.2} />
-              </button>
-              <Brand />
-            </div>
+          {/* A contained glass bar rather than controls floating over the background, so
+              its edges line up with the cards below it. lg:top-6 matches the sidebar's
+              own sticky offset — both then come to rest on the same line when scrolled. */}
+          <header className="sticky top-0 z-30 mb-5 px-4 pt-3 lg:top-6 lg:mb-6 lg:px-0 lg:pt-0">
+            <div className="glass flex items-center justify-between gap-3 rounded-[18px] px-3 py-2.5 sm:px-4">
+              <div className="flex min-w-0 items-center gap-3 lg:hidden">
+                <button
+                  onClick={() => setNavOpen(true)}
+                  aria-label="Open navigation"
+                  className="rounded-[10px] p-2 text-ink-500 transition hover:bg-ink-900/5 hover:text-ink-900"
+                >
+                  <Menu size={19} strokeWidth={2.2} />
+                </button>
+                <Brand />
+              </div>
 
-            <div className="flex items-center gap-2 sm:gap-3">
-              <CenterSwitcher />
-              <UserMenu />
+              {/* The sidebar carries the brand on desktop, so this slot shows today's
+                  date — it keeps the bar from reading as a lopsided strip of controls. */}
+              <p className="hidden items-center gap-2 pl-1 text-[13px] font-semibold text-ink-500 lg:flex">
+                <Calendar size={15} strokeWidth={2.2} className="text-ink-400" />
+                {new Date().toLocaleDateString(undefined, {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                })}
+              </p>
+
+              <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+                <CenterSwitcher />
+                <UserMenu />
+              </div>
             </div>
           </header>
 

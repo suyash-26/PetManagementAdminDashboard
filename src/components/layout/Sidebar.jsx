@@ -45,7 +45,7 @@ const PLATFORM_SECTION = {
   title: "Platform",
   items: [
     { to: "/dashboard/platform/centers", label: "Approve Centers", icon: ShieldCheck, ready: true },
-    { to: "/dashboard/platform/users", label: "Users & Roles", icon: UserCog, ready: false },
+    { to: "/dashboard/platform/users", label: "Users & Roles", icon: UserCog, ready: true },
   ],
 };
 

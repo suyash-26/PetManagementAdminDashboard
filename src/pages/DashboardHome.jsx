@@ -151,11 +151,6 @@ export default function DashboardHome() {
             : "Select a center to get started."
         }
         isSuperAdmin={isSuperAdmin}
-        action={
-          <Link to="/dashboard/centers/new">
-            <Button icon={Plus}>Register a center</Button>
-          </Link>
-        }
       />
 
       {activeCenter?.status !== "ACTIVE" && activeCenter && (
@@ -275,36 +270,34 @@ export default function DashboardHome() {
   );
 }
 
-function Hero({ name, subtitle, action, isSuperAdmin }) {
+// A compact strip, not a landing banner: it sits directly under the top bar and shares
+// its width, so the two read as one header block rather than two competing hero slabs.
+// "Register a center" lives in the sidebar and in Quick actions — it isn't repeated here.
+function Hero({ name, subtitle, isSuperAdmin }) {
   return (
     <Card className="animate-rise relative overflow-hidden" padded={false}>
-      {/* Ambient blobs + a faint paw motif — decorative depth without illustration
-          that would read as childish. */}
-      <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-gradient-to-br from-brand-500/16 to-violet-500/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-mint-400/12 blur-3xl" />
+      {/* A faint paw motif and one blob — enough depth to not read as a plain bar. */}
+      <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-gradient-to-br from-brand-500/16 to-violet-500/10 blur-3xl" />
       <PawPrint
-        size={190}
+        size={116}
         strokeWidth={1}
-        className="pointer-events-none absolute -right-6 -top-6 rotate-12 text-brand-500/[0.05]"
+        className="pointer-events-none absolute -right-3 -top-3 rotate-12 text-brand-500/[0.05]"
       />
 
-      <div className="relative flex flex-wrap items-end justify-between gap-5 p-6 sm:p-8">
-        <div className="min-w-0">
+      <div className="relative px-5 py-4 sm:px-6 sm:py-[18px]">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <h1 className="min-w-0 text-[19px] font-extrabold leading-tight tracking-tight text-ink-900 sm:text-[21px]">
+            {greeting()}, {name?.split(" ")[0] ?? "there"}{" "}
+            <span className="inline-block">👋</span>
+          </h1>
           {isSuperAdmin && (
-            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-brand-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-brand-600">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-brand-600">
               <ShieldCheck size={12} strokeWidth={2.6} />
               Super admin
             </span>
           )}
-          <h1 className="text-[28px] font-extrabold leading-tight tracking-tight text-ink-900 sm:text-[34px]">
-            {greeting()}, {name?.split(" ")[0] ?? "there"}{" "}
-            <span className="inline-block origin-[70%_70%] animate-none">👋</span>
-          </h1>
-          <p className="mt-2 max-w-xl text-[14.5px] leading-relaxed text-ink-500">
-            {subtitle}
-          </p>
         </div>
-        {action}
+        <p className="mt-1 text-[13px] leading-relaxed text-ink-500">{subtitle}</p>
       </div>
     </Card>
   );
