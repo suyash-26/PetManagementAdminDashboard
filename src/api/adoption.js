@@ -1,38 +1,63 @@
-/* eslint-disable no-unused-vars -- see the note in intake.js: these are the real
-   signatures, kept intact until the endpoints exist. */
 import { coreRequest } from "./http";
 
-// NOT WIRED YET — the adoption module is another developer's track (v2 §9, Dev 5).
-// Paths transcribed from v2 §8 so the contract is fixed even though the endpoints
-// don't exist yet.
+// v2 Flow C + D — petManagementService's AdoptionListingController and
+// AdoptionRequestController.
+//
+// The shape of this module reflects the policy: there is a create-listing endpoint under
+// /centers/{id}/listings and none under /listings. That omission is deliberate and is the
+// whole enforcement of "only a center may list a pet" — do not add a user-facing variant.
+//
+// Approve/reject/cancel/complete on an application are NOT here: adoption shares the
+// generic approval engine, so they live in api/requests.js keyed by the same requestId.
 
-function notImplemented(what) {
-  throw new Error(`${what} is not available yet — the adoption module is still being built.`);
+// POST /centers/{id}/listings -> AdoptionListingResponse (201)
+//
+// The server enforces the custody invariant: pet.custodianCenterId must equal this center
+// AND pet.status must be IN_CENTER_CUSTODY, else 409 PET_NOT_IN_YOUR_CUSTODY. So the only
+// pets that can be listed are ones this center has actually taken in — which is why the
+// custody roster is the natural entry point to this call.
+export function createListing(centerId, { petId, description, reason, adoptionFee }) {
+  return coreRequest(`/centers/${centerId}/listings`, {
+    method: "POST",
+    body: {
+      petId,
+      description: description?.trim() || null,
+      reason: reason?.trim() || null,
+      // "" would fail @PositiveOrZero on the server; null means "no fee".
+      adoptionFee: adoptionFee === "" || adoptionFee == null ? null : Number(adoptionFee),
+    },
+  });
 }
 
-// POST /centers/{id}/listings — admin-only in v2. There is deliberately no user-facing
-// listing-creation endpoint anywhere in the system: that omission, plus the custody
-// invariant below, is the whole enforcement of "no direct user-to-user adoption".
-export function createListing(centerId, payload) {
-  notImplemented("Creating an adoption listing");
-  // return coreRequest(`/centers/${centerId}/listings`, { method: "POST", body: payload });
+// GET /centers/{id}/listings?status= -> AdoptionListingResponse[]
+//
+// Deliberately NOT the public GET /listings feed: that one is anonymous and hardcoded to
+// OPEN, so an admin would never see their RESERVED or CLOSED listings — precisely the ones
+// with an approved adopter mid-handover.
+export function listCenterListings(centerId, status) {
+  const query = status ? `?status=${encodeURIComponent(status)}` : "";
+  return coreRequest(`/centers/${centerId}/listings${query}`, { method: "GET" });
 }
 
-// GET /listings?centerId= — the public feed, filtered to this center for the admin view
-export function listListings(centerId) {
-  notImplemented("Adoption listings");
-  // return coreRequest(`/listings?centerId=${centerId}`, { method: "GET" });
+// GET /listings/{id} -> AdoptionListingResponse. Public endpoint, reused here.
+export function getListing(listingId) {
+  return coreRequest(`/listings/${listingId}`, { method: "GET" });
 }
 
-// GET /listings/{id}/applicants — every competing application for one listing, shown
-// side by side so the admin can screen them against each other
+// GET /listings/{id}/applicants -> AdoptionRequestResponse[]
+//
+// Every competing application for one listing, side by side (Flow D step 2). Scoped
+// server-side to admins of this listing's own center, so a 403 here means you are looking
+// at another center's listing, not that your role is wrong.
 export function listApplicants(listingId) {
-  notImplemented("Adoption applicants");
-  // return coreRequest(`/listings/${listingId}/applicants`, { method: "GET" });
+  return coreRequest(`/listings/${listingId}/applicants`, { method: "GET" });
 }
 
-// PATCH /listings/{id} — delist
+// PATCH /listings/{id} -> AdoptionListingResponse
+//
+// Delist. Only from OPEN — a RESERVED listing has an approved adopter, and that
+// application has to be cancelled through the request engine first so its own status and
+// history stay truthful. The pet returns to IN_CENTER_CUSTODY, not to its old owner.
 export function delist(listingId) {
-  notImplemented("Delisting");
-  // return coreRequest(`/listings/${listingId}`, { method: "PATCH", body: { listingStatus: "CLOSED" } });
+  return coreRequest(`/listings/${listingId}`, { method: "PATCH" });
 }
